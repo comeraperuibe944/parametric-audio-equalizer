@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Parametric Equalizer & Preset Designer</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    body {
+      background-color: #0b0f19;
+      color: #f1f5f9;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      user-select: none;
+    }
+    input[type=range] {
+      accent-color: #3b82f6;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+  <div class="max-w-5xl w-full flex flex-col gap-6">
+
+    <!-- Top Header -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 backdrop-blur shadow-xl">
+      <div>
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/30">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+              Parametric Graphic Equalizer
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Real-time Audio</span>
+            </h1>
+            <p class="text-xs text-slate-400">Edit curve nodes by dragging or use the filter sliders below.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Presets Selector & Actions -->
+      <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <select id="presetSelect" class="bg-slate-800 border border-slate-700 text-sm text-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+          <option value="flat">Flat Baseline</option>
+          <option value="bass_boost">Bass Boost</option>
+          <option value="vocal">Vocal Clarity</option>
+          <option value="electronic">Electronic / Dance</option>
+          <option value="rock">Rock / Acoustic</option>
+        </select>
+        
+        <button id="btnNewPreset" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Save Preset
+        </button>
+
+        <button id="btnExportEasyEffects" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg text-xs font-medium flex items-center gap-1.5 transition" title="Exportar predefinição compatível com EasyEffects">
+          <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Exportar JSON
+        </button>
+
+        <button id="btnReset" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg text-xs font-medium transition">
+          Resetar
+        </button>
+      </div>
+    </header>
+
+    <!-- Audio Player / Controls Bar -->
+    <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <button id="btnPlayPause" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold flex items-center gap-2 transition shadow-sm">
+          <svg id="playIcon" class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <span id="playText">Testar Áudio (Demo)</span>
+        </button>
+
+        <label class="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg text-xs font-medium cursor-pointer flex items-center gap-1.5 transition">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+          Carregar Arquivo MP3/WAV
+          <input type="file" id="audioFileInput" accept="audio/*" class="hidden">
+        </label>
+        
+        <span id="audioTrackName" class="text-xs text-slate-400 truncate max-w-xs">Sintetizador Lo-Fi Beat Integrado</span>
+      </div>
+
+      <!-- Master Volume & Bypass -->
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-slate-400">Volume:</label>
+          <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.75" class="w-24">
+        </div>
+        
+        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+          <input type="checkbox" id="bypassToggle" class="rounded bg-slate-800 border-slate-700 text-blue-600 focus:ring-0">
+          <span>Bypass (Desligar EQ)</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Main Visual Canvas Section -->
+    <div class="relative bg-slate-950 border border-slate-800 rounded-2xl p-4 shadow-2xl overflow-hidden">
+      <div class="flex justify-between items-center mb-2 px-2 text-xs text-slate-400">
+        <span>Arraste os pontos coloridos no gráfico para alterar <b>Ganho (dB)</b> e <b>Frequência (Hz)</b></span>
+        <span class="flex items-center gap-3">
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Curva Resultante</span>
+          <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400/40"></span> Espectro em Tempo Real</span>
+        </span>
+      </div>
+
+      <div class="relative w-full aspect-[21/9] min-h-[300px]">
+        <canvas id="eqCanvas" class="w-full h-full rounded-xl cursor-crosshair bg-slate-900/60"></canvas>
+      </div>
+
+      <div id="tooltip" class="absolute pointer-events-none hidden bg-slate-900/95 border border-slate-700 text-slate-200 text-xs px-2.5 py-1.5 rounded-lg shadow-lg"></div>
+    </div>
+
+    <!-- Sliders and Band Controls -->
+    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg">
+      <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Controles Finos das Frequências</h3>
+      <div id="slidersGrid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
+        <!-- Sliders injected by JS -->
+      </div>
+    </div>
+
+    <!-- Instructions / EasyEffects Integration -->
+    <div class="bg-blue-950/30 border border-blue-900/40 rounded-2xl p-5 text-slate-300 text-sm flex flex-col md:flex-row gap-5 items-start">
+      <div class="p-3 bg-blue-600/20 text-blue-400 rounded-xl">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <div class="flex-1">
+        <h4 class="font-bold text-white mb-1">Equalizador no Sistema (EasyEffects já aberto)</h4>
+        <p class="text-slate-300 text-xs leading-relaxed mb-3">
+          O aplicativo do sistema <b>EasyEffects</b> também já está instalado e aberto na sua área de trabalho para equalizar todo o som do computador (YouTube, Spotify, jogos, etc.).
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div class="bg-slate-900/70 p-3 rounded-lg border border-slate-800">
+            <span class="font-semibold text-blue-300 block mb-1">Neste Editor Gráfico (Aqui):</span>
+            Personalize a curva, teste o som com o player em tempo real, clique em <b>"Save Preset"</b> ou exporte para JSON.
+          </div>
+          <div class="bg-slate-900/70 p-3 rounded-lg border border-slate-800">
+            <span class="font-semibold text-blue-300 block mb-1">No EasyEffects do Sistema:</span>
+            Clique em <b>Efeitos &gt; Equalizador</b> na janela do EasyEffects para editar os nós diretamente na tela e salvar predefinições no menu <b>Predefinições</b>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal Salvar Preset -->
+  <div id="saveModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+      <h3 class="text-lg font-bold text-white mb-2">Salvar Novo Preset</h3>
+      <p class="text-xs text-slate-400 mb-4">Dê um nome para a sua configuração de equalização personalizada:</p>
+      <input type="text" id="customPresetName" placeholder="Ex: Meus Graves Perfeitos" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white mb-4 outline-none focus:ring-2 focus:ring-blue-500">
+      <div class="flex justify-end gap-2">
+        <button id="btnCancelSave" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold">Cancelar</button>
+        <button id="btnConfirmSave" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Audio System State ---
+    const bands = [
+      { id: 'b0', name: 'Sub-Bass', freq: 32, gain: 0, q: 1.4, type: 'lowshelf', color: '#f43f5e' },
+      { id: 'b1', name: 'Bass', freq: 64, gain: 0, q: 1.4, type: 'peaking', color: '#fb923c' },
+      { id: 'b2', name: 'Low-Mid', freq: 125, gain: 0, q: 1.4, type: 'peaking', color: '#facc15' },
+      { id: 'b3', name: 'Mid', freq: 250, gain: 0, q: 1.4, type: 'peaking', color: '#4ade80' },
+      { id: 'b4', name: 'High-Mid', freq: 500, gain: 0, q: 1.4, type: 'peaking', color: '#2dd4bf' },
+      { id: 'b5', name: 'Presence', freq: 1000, gain: 0, q: 1.4, type: 'peaking', color: '#38bdf8' },
+      { id: 'b6', name: 'Treble', freq: 4000, gain: 0, q: 1.4, type: 'peaking', color: '#818cf8' },
+      { id: 'b7', name: 'Air', freq: 12000, gain: 0, q: 1.4, type: 'highshelf', color: '#c084fc' }
+    ];
+
+    const presets = {
+      flat: [0, 0, 0, 0, 0, 0, 0, 0],
+      bass_boost: [6.5, 5.0, 3.2, 0.5, -0.5, -1.0, 1.0, 2.5],
+      vocal: [-3.0, -1.5, 0.0, 2.5, 4.0, 3.5, 2.0, 0.5],
+      electronic: [5.5, 4.0, 1.0, -1.5, 0.0, 2.0, 4.5, 5.0],
+      rock: [4.5, 3.0, -0.5, -2.0, 1.5, 3.0, 4.0, 3.5]
+    };
+
+    // Load saved custom presets from localStorage
+    const savedCustomPresets = JSON.parse(localStorage.getItem('my_eq_presets') || '{}');
+    Object.assign(presets, savedCustomPresets);
+
+    let audioCtx = null;
+    let masterGain = null;
+    let filterNodes = [];
+    let analyser = null;
+    let isPlaying = false;
+    let demoOscillators = [];
+    let demoInterval = null;
+    let audioElement = null;
+    let audioSourceNode = null;
+
+    // Canvas Settings
+    const canvas = document.getElementById('eqCanvas');
+    const ctx = canvas.getContext('2d');
+    const tooltip = document.getElementById('tooltip');
+
+    const minFreq = 20;
+    const maxFreq = 20000;
+    const minGain = -18;
+    const maxGain = 18;
+
+    let draggingBandIndex = -1;
+    let hoveredBandIndex = -1;
+
+    // Coordinate conversion
+    function freqToX(freq, width) {
+      const minLog = Math.log10(minFreq);
+      const maxLog = Math.log10(maxFreq);
+      const freqLog = Math.log10(Math.max(minFreq, Math.min(maxFreq, freq)));
+      return ((freqLog - minLog) / (maxLog - minLog)) * width;
+    }
+
+    function xToFreq(x, width) {
+      const minLog = Math.log10(minFreq);
+      const maxLog = Math.log10(maxFreq);
+      const norm = Math.max(0, Math.min(1, x / width));
+      return Math.pow(10, minLog + norm * (maxLog - minLog));
+    }
+
+    function gainToY(gain, height) {
+      const norm = (gain - minGain) / (maxGain - minGain);
+      return height - norm * height;
+    }
+
+    function yToGain(y, height) {
+      const norm = (height - y) / height;
+      return minGain + Math.max(0, Math.min(1, norm)) * (maxGain - minGain);
+    }
+
+    // Resize canvas
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+      drawGraph();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // Initialize Web Audio
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
+
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = parseFloat(document.getElementById('masterVolume').value);
+
+      // Create filter chain
+      filterNodes = bands.map((b) => {
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = b.type;
+        filter.frequency.value = b.freq;
+        filter.gain.value = b.gain;
+        filter.Q.value = b.q;
+        return filter;
+      });
+
+      // Chain filters: filter0 -> filter1 -> ... -> masterGain -> analyser -> destination
+      for (let i = 0; i < filterNodes.length - 1; i++) {
+        filterNodes[i].connect(filterNodes[i + 1]);
+      }
+      filterNodes[filterNodes.length - 1].connect(masterGain);
+      masterGain.connect(analyser);
+      analyser.connect(audioCtx.destination);
+    }
+
+    // Play synthesized demo track (chill chords + rhythm)
+    function playDemo() {
+      initAudio();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      isPlaying = true;
+      startEnergySavingLoop();
+      document.getElementById('playText').textContent = 'Pausar Áudio';
+      document.getElementById('playIcon').innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+
+      let step = 0;
+      const chords = [
+        [130.81, 196.00, 246.94, 293.66], // Cmaj9
+        [110.00, 164.81, 220.00, 261.63], // Am7
+        [146.83, 220.00, 261.63, 329.63], // Dm7
+        [98.00, 146.83, 196.00, 246.94]   // G7
+      ];
+
+      demoInterval = setInterval(() => {
+        if (!isPlaying || !audioCtx) return;
+        const currentChord = chords[Math.floor(step / 4) % chords.length];
+        
+        // Synth Note
+        currentChord.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const noteGain = audioCtx.createGain();
+          osc.type = idx % 2 === 0 ? 'sawtooth' : 'triangle';
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+          
+          noteGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+          noteGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.9);
+
+          osc.connect(noteGain);
+          noteGain.connect(filterNodes[0]);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 1);
+        });
+
+        // Beat Kick/Sub on 0 and 2
+        if (step % 2 === 0) {
+          const kickOsc = audioCtx.createOscillator();
+          const kickGain = audioCtx.createGain();
+          kickOsc.frequency.setValueAtTime(140, audioCtx.currentTime);
+          kickOsc.frequency.exponentialRampToValueAtTime(38, audioCtx.currentTime + 0.18);
+          kickGain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+          kickGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
+          kickOsc.connect(kickGain);
+          kickGain.connect(filterNodes[0]);
+          kickOsc.start();
+          kickOsc.stop(audioCtx.currentTime + 0.25);
+        }
+
+        step++;
+      }, 350);
+    }
+
+    function stopDemo() {
+      isPlaying = false;
+      if (demoInterval) clearInterval(demoInterval);
+      if (audioElement) audioElement.pause();
+      if (audioCtx && audioCtx.state === 'running') {
+        audioCtx.suspend(); // Suspends audio thread to save laptop battery
+      }
+      stopEnergySavingLoop();
+      document.getElementById('playText').textContent = 'Testar Áudio (Demo)';
+      document.getElementById('playIcon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+    }
+
+    // Toggle Play
+    document.getElementById('btnPlayPause').addEventListener('click', () => {
+      if (isPlaying) {
+        stopDemo();
+      } else {
+        if (audioElement && audioElement.src) {
+          initAudio();
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          audioElement.play();
+          isPlaying = true;
+          startEnergySavingLoop();
+          document.getElementById('playText').textContent = 'Pausar Áudio';
+          document.getElementById('playIcon').innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+        } else {
+          playDemo();
+        }
+      }
+    });
+
+    // Custom File Loader
+    document.getElementById('audioFileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      initAudio();
+      stopDemo();
+
+      if (!audioElement) {
+        audioElement = new Audio();
+        audioElement.addEventListener('ended', stopDemo);
+        audioSourceNode = audioCtx.createMediaElementSource(audioElement);
+        audioSourceNode.connect(filterNodes[0]);
+      }
+
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      audioElement.src = URL.createObjectURL(file);
+      document.getElementById('audioTrackName').textContent = file.name;
+      audioElement.play();
+      isPlaying = true;
+      startEnergySavingLoop();
+      document.getElementById('playText').textContent = 'Pausar Áudio';
+      document.getElementById('playIcon').innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+    });
+
+    // Master Volume
+    document.getElementById('masterVolume').addEventListener('input', (e) => {
+      if (masterGain) {
+        masterGain.gain.value = parseFloat(e.target.value);
+      }
+    });
+
+    // Bypass
+    document.getElementById('bypassToggle').addEventListener('change', (e) => {
+      const bypass = e.target.checked;
+      bands.forEach((b, idx) => {
+        if (filterNodes[idx]) {
+          filterNodes[idx].gain.value = bypass ? 0 : b.gain;
+        }
+      });
+      drawGraph();
+    });
+
+    // Update Filter Node
+    function updateFilter(index) {
+      if (filterNodes[index]) {
+        const bypass = document.getElementById('bypassToggle').checked;
+        filterNodes[index].frequency.value = bands[index].freq;
+        filterNodes[index].gain.value = bypass ? 0 : bands[index].gain;
+        filterNodes[index].Q.value = bands[index].q;
+      }
+      const slider = document.getElementById(`slider-${index}`);
+      if (slider) slider.value = bands[index].gain;
+      const gainVal = document.getElementById(`gain-val-${index}`);
+      if (gainVal) gainVal.textContent = (bands[index].gain > 0 ? '+' : '') + bands[index].gain.toFixed(1) + ' dB';
+    }
+
+    // Build Sliders UI
+    function buildSliders() {
+      const grid = document.getElementById('slidersGrid');
+      grid.innerHTML = '';
+      bands.forEach((b, idx) => {
+        const card = document.createElement('div');
+        card.className = 'bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 flex flex-col items-center gap-2 text-center shadow-inner';
+        card.innerHTML = `
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${b.color}"></span>
+            <span class="text-xs font-semibold text-slate-200">${b.name}</span>
+          </div>
+          <span class="text-[11px] text-slate-400">${b.freq >= 1000 ? (b.freq/1000).toFixed(1) + 'k' : b.freq} Hz</span>
+          <div class="h-28 flex items-center py-2">
+            <input type="range" id="slider-${idx}" min="-18" max="18" step="0.5" value="${b.gain}" 
+              class="h-24 -rotate-90 origin-center cursor-pointer w-24">
+          </div>
+          <span id="gain-val-${idx}" class="text-xs font-mono font-bold text-blue-400">${b.gain > 0 ? '+' : ''}${b.gain.toFixed(1)} dB</span>
+        `;
+        grid.appendChild(card);
+
+        const slider = card.querySelector(`#slider-${idx}`);
+        slider.addEventListener('input', (e) => {
+          bands[idx].gain = parseFloat(e.target.value);
+          updateFilter(idx);
+          drawGraph();
+        });
+      });
+    }
+
+    // Calculate Combined Frequency Response
+    function calculateResponse(frequencies) {
+      const magResponse = new Float32Array(frequencies.length).fill(1.0);
+      const bypass = document.getElementById('bypassToggle').checked;
+      if (bypass) {
+        return new Float32Array(frequencies.length).fill(0);
+      }
+
+      bands.forEach(band => {
+        if (Math.abs(band.gain) < 0.01) return;
+        const A = Math.pow(10, band.gain / 40);
+        const w0 = 2 * Math.PI * band.freq / 48000;
+        const alpha = Math.sin(w0) / (2 * (band.q || 1.4));
+
+        frequencies.forEach((f, i) => {
+          const w = 2 * Math.PI * f / 48000;
+          // Approximate bell response curve
+          const octaveDistance = Math.log2(f / band.freq);
+          const weight = Math.exp(-Math.pow(octaveDistance * (band.q || 1.4), 2));
+          magResponse[i] *= Math.pow(10, (band.gain * weight) / 20);
+        });
+      });
+
+      const dbResponse = new Float32Array(frequencies.length);
+      for (let i = 0; i < frequencies.length; i++) {
+        dbResponse[i] = 20 * Math.log10(Math.max(0.0001, magResponse[i]));
+      }
+      return dbResponse;
+    }
+
+    // Draw Canvas Graph
+    function drawGraph() {
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // 1. Draw Grid Lines (dB and Hz)
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = '#1e293b';
+      ctx.fillStyle = '#64748b';
+      ctx.font = '10px system-ui';
+
+      // Horizontal dB lines
+      const dbSteps = [-12, -6, 0, 6, 12];
+      dbSteps.forEach(db => {
+        const y = gainToY(db, height);
+        ctx.beginPath();
+        ctx.strokeStyle = db === 0 ? '#334155' : '#1e293b';
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+        ctx.fillText((db > 0 ? '+' : '') + db + ' dB', 8, y - 3);
+      });
+
+      // Vertical Hz lines
+      const hzSteps = [30, 60, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+      hzSteps.forEach(hz => {
+        const x = freqToX(hz, width);
+        ctx.beginPath();
+        ctx.strokeStyle = '#1e293b';
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+        const label = hz >= 1000 ? (hz / 1000) + 'k' : hz + '';
+        ctx.fillText(label, x + 3, height - 8);
+      });
+
+      // 2. Draw Real-Time FFT Spectrum (if playing)
+      if (isPlaying && analyser) {
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyser.getByteFrequencyData(dataArray);
+
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(52, 211, 153, 0.15)';
+        ctx.strokeStyle = 'rgba(52, 211, 153, 0.4)';
+        ctx.lineWidth = 1.5;
+
+        for (let i = 0; i < bufferLength; i++) {
+          const freq = (i * 24000) / bufferLength;
+          if (freq < minFreq) continue;
+          const x = freqToX(freq, width);
+          const v = dataArray[i] / 255;
+          const y = height - v * (height * 0.75);
+
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // 3. Draw EQ Frequency Curve
+      const samplePoints = 200;
+      const curveFreqs = [];
+      for (let i = 0; i < samplePoints; i++) {
+        curveFreqs.push(xToFreq((i / (samplePoints - 1)) * width, width));
+      }
+      const response = calculateResponse(curveFreqs);
+
+      // Curve Area Fill Gradient
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, 'rgba(59, 130, 246, 0.25)');
+      grad.addColorStop(1, 'rgba(59, 130, 246, 0.02)');
+
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+      for (let i = 0; i < samplePoints; i++) {
+        const x = (i / (samplePoints - 1)) * width;
+        const y = gainToY(response[i], height);
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(width, height);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Curve Line
+      ctx.beginPath();
+      for (let i = 0; i < samplePoints; i++) {
+        const x = (i / (samplePoints - 1)) * width;
+        const y = gainToY(response[i], height);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // 4. Draw Draggable Interactive Control Points
+      bands.forEach((b, idx) => {
+        const x = freqToX(b.freq, width);
+        const y = gainToY(b.gain, height);
+        const isHovered = (idx === hoveredBandIndex || idx === draggingBandIndex);
+
+        // Halo
+        ctx.beginPath();
+        ctx.arc(x, y, isHovered ? 14 : 9, 0, Math.PI * 2);
+        ctx.fillStyle = isHovered ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.5)';
+        ctx.fill();
+
+        // Node
+        ctx.beginPath();
+        ctx.arc(x, y, isHovered ? 8 : 6, 0, Math.PI * 2);
+        ctx.fillStyle = b.color;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+
+        // Text Badge
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = isHovered ? 'bold 11px system-ui' : '10px system-ui';
+        const labelText = (b.gain > 0 ? '+' : '') + b.gain.toFixed(1) + 'dB';
+        ctx.fillText(labelText, x - 15, y - 12);
+      });
+    }
+
+    // Energy-Saving Render Engine:
+    // Only renders when playing audio or on user interaction (0.0% CPU when idle)
+    let animFrameId = null;
+
+    function renderOnce() {
+      drawGraph();
+    }
+
+    function startEnergySavingLoop() {
+      if (animFrameId) return;
+      let lastTime = 0;
+      const targetInterval = 1000 / 30; // Cap at 30 FPS during playback for laptop battery saving
+
+      function loop(currentTime) {
+        if (!isPlaying) {
+          animFrameId = null;
+          drawGraph();
+          return;
+        }
+        if (currentTime - lastTime >= targetInterval) {
+          lastTime = currentTime;
+          drawGraph();
+        }
+        animFrameId = requestAnimationFrame(loop);
+      }
+      animFrameId = requestAnimationFrame(loop);
+    }
+
+    function stopEnergySavingLoop() {
+      if (animFrameId) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+      }
+      drawGraph();
+    }
+
+    // Initial render once
+    renderOnce();
+
+    // Mouse Interaction on Canvas
+    function getPointerPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top,
+        width: rect.width,
+        height: rect.height
+      };
+    }
+
+    function findClosestBand(x, y, width, height) {
+      let closest = -1;
+      let minDist = 25; // hit radius in px
+      bands.forEach((b, idx) => {
+        const bx = freqToX(b.freq, width);
+        const by = gainToY(b.gain, height);
+        const dist = Math.hypot(bx - x, by - y);
+        if (dist < minDist) {
+          minDist = dist;
+          closest = idx;
+        }
+      });
+      return closest;
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      initAudio();
+      const pos = getPointerPos(e);
+      draggingBandIndex = findClosestBand(pos.x, pos.y, pos.x ? pos.width : 1, pos.y ? pos.height : 1);
+      if (draggingBandIndex !== -1) {
+        canvas.style.cursor = 'grabbing';
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      const pos = getPointerPos(e);
+      if (draggingBandIndex !== -1) {
+        // Update gain & freq of the dragging node
+        const newGain = Math.max(minGain, Math.min(maxGain, yToGain(pos.y, pos.height)));
+        bands[draggingBandIndex].gain = Math.round(newGain * 10) / 10;
+
+        // Optionally allow dragging freq slightly within its octave range
+        updateFilter(draggingBandIndex);
+        drawGraph();
+
+        // Update tooltip
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.pageX + 15) + 'px';
+        tooltip.style.top = (e.pageY - 25) + 'px';
+        const b = bands[draggingBandIndex];
+        tooltip.innerHTML = `<b>${b.name}</b>: ${b.freq} Hz | <b>${b.gain > 0 ? '+' : ''}${b.gain.toFixed(1)} dB</b>`;
+      } else {
+        // Check hover
+        const prevHover = hoveredBandIndex;
+        hoveredBandIndex = findClosestBand(pos.x, pos.y, pos.width, pos.height);
+        canvas.style.cursor = hoveredBandIndex !== -1 ? 'grab' : 'crosshair';
+        if (prevHover !== hoveredBandIndex) {
+          renderOnce();
+        }
+        if (hoveredBandIndex !== -1) {
+          const b = bands[hoveredBandIndex];
+          tooltip.style.display = 'block';
+          tooltip.style.left = (e.pageX + 15) + 'px';
+          tooltip.style.top = (e.pageY - 25) + 'px';
+          tooltip.innerHTML = `<b>${b.name}</b>: ${b.freq} Hz | <b>${b.gain > 0 ? '+' : ''}${b.gain.toFixed(1)} dB</b>`;
+        } else {
+          tooltip.style.display = 'none';
+        }
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (draggingBandIndex !== -1) {
+        draggingBandIndex = -1;
+        renderOnce();
+      }
+      canvas.style.cursor = 'crosshair';
+      tooltip.style.display = 'none';
+    });
+
+    // Preset Selection
+    document.getElementById('presetSelect').addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (presets[val]) {
+        applyPresetValues(presets[val]);
+      }
+    });
+
+    function applyPresetValues(vals) {
+      bands.forEach((b, idx) => {
+        b.gain = vals[idx] || 0;
+        updateFilter(idx);
+      });
+      drawGraph();
+    }
+
+    // Reset button
+    document.getElementById('btnReset').addEventListener('click', () => {
+      applyPresetValues(presets.flat);
+      document.getElementById('presetSelect').value = 'flat';
+    });
+
+    // Custom Preset Save Modal
+    const saveModal = document.getElementById('saveModal');
+    const customPresetName = document.getElementById('customPresetName');
+
+    document.getElementById('btnNewPreset').addEventListener('click', () => {
+      customPresetName.value = '';
+      saveModal.classList.remove('hidden');
+      customPresetName.focus();
+    });
+
+    document.getElementById('btnCancelSave').addEventListener('click', () => {
+      saveModal.classList.add('hidden');
+    });
+
+    document.getElementById('btnConfirmSave').addEventListener('click', () => {
+      const name = customPresetName.value.trim();
+      if (!name) return;
+      const key = name.toLowerCase().replace(/\s+/g, '_');
+      const gains = bands.map(b => b.gain);
+      
+      presets[key] = gains;
+      savedCustomPresets[key] = gains;
+      localStorage.setItem('my_eq_presets', JSON.stringify(savedCustomPresets));
+
+      // Add to select dropdown
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = `* ${name}`;
+      document.getElementById('presetSelect').appendChild(opt);
+      document.getElementById('presetSelect').value = key;
+
+      saveModal.classList.add('hidden');
+      alert(`Preset "${name}" salvo com sucesso!`);
+    });
+
+    // Export EasyEffects JSON
+    document.getElementById('btnExportEasyEffects').addEventListener('click', () => {
+      const leftObj = {};
+      const rightObj = {};
+
+      bands.forEach((b, idx) => {
+        const bandKey = `band${idx}`;
+        const bandData = {
+          frequency: b.freq,
+          gain: b.gain,
+          mode: "RLC (BT)",
+          mute: false,
+          q: b.q || 1.41,
+          slope: "x1",
+          solo: false,
+          type: b.type === 'lowshelf' ? 'Low-shelf' : b.type === 'highshelf' ? 'High-shelf' : 'Bell'
+        };
+        leftObj[bandKey] = bandData;
+        rightObj[bandKey] = { ...bandData };
+      });
+
+      const presetData = {
+        output: {
+          blocklist: [],
+          "equalizer#0": {
+            balance: 0.0,
+            bypass: false,
+            "input-gain": 0.0,
+            mode: "IIR",
+            "num-bands": bands.length,
+            "output-gain": 0.0,
+            "split-channels": false,
+            left: leftObj,
+            right: rightObj
+          },
+          plugins_order: ["equalizer#0"]
+        }
+      };
+
+      const blob = new Blob([JSON.stringify(presetData, null, 4)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'meu_preset_equalizador.json';
+      a.click();
+    });
+
+    // Init UI
+    buildSliders();
+    resizeCanvas();
+    // Populate saved presets
+    Object.keys(savedCustomPresets).forEach(key => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = `* ${key.replace(/_/g, ' ')}`;
+      document.getElementById('presetSelect').appendChild(opt);
+    });
+  </script>
+</body>
+</html>

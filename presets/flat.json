@@ -1,0 +1,29 @@
+{
+  "output": {
+    "equalizer#0": {
+      "bypass": false,
+      "input-gain": 0.0,
+      "output-gain": 0.0,
+      "bands": [
+        {
+          "type": "Bell",
+          "frequency": 100.0,
+          "gain": 0.0,
+          "q": 1.41
+        },
+        {
+          "type": "Bell",
+          "frequency": 1000.0,
+          "gain": 0.0,
+          "q": 1.41
+        },
+        {
+          "type": "Bell",
+          "frequency": 10000.0,
+          "gain": 0.0,
+          "q": 1.41
+        }
+      ]
+    }
+  }
+}

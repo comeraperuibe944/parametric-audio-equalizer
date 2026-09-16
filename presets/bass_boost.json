@@ -1,0 +1,35 @@
+{
+  "output": {
+    "equalizer#0": {
+      "bypass": false,
+      "input-gain": 0.0,
+      "output-gain": -2.0,
+      "bands": [
+        {
+          "type": "Low-shelf",
+          "frequency": 80.0,
+          "gain": 6.0,
+          "q": 0.71
+        },
+        {
+          "type": "Bell",
+          "frequency": 250.0,
+          "gain": 2.5,
+          "q": 1.2
+        },
+        {
+          "type": "Bell",
+          "frequency": 1000.0,
+          "gain": 0.0,
+          "q": 1.41
+        },
+        {
+          "type": "High-shelf",
+          "frequency": 12000.0,
+          "gain": 1.5,
+          "q": 0.71
+        }
+      ]
+    }
+  }
+}
